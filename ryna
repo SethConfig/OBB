@@ -1,0 +1,359 @@
+#!/bin/bash
+
+# Define main directories
+down="/storage/emulated/0/Download"
+tool_dir="$down/RYNA_CODE"
+output_dir="$tool_dir/output"
+
+# Colors
+NOCOLOR='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+LIGHTGREEN='\033[1;32m'
+LIGHTRED='\033[1;31m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+
+# Language variables
+declare -A lang
+lang["en,0"]="English"
+lang["en,1"]="Unpack OBB file"
+lang["en,2"]="Repack OBB file"
+lang["en,3"]="This button is not active"
+lang["en,4"]="Exit"
+lang["en,5"]="Select option (1-4): "
+lang["en,6"]="Invalid option!"
+lang["en,7"]="No unpacked files found"
+lang["en,8"]="Successfully unpacked to: "
+lang["en,9"]="Successfully repacked OBB file"
+lang["en,10"]="Output: "
+lang["en,11"]="Select file number: "
+lang["en,12"]="No OBB files found in "
+lang["en,13"]="Available OBB files:"
+lang["en,14"]="Back to menu"
+lang["en,15"]="Invalid selection!"
+lang["en,16"]="Unpacking "
+lang["en,17"]="Preparing files..."
+lang["en,18"]="Adjusting file size..."
+lang["en,19"]="🚀 RePacking OBB Files..."
+lang["en,20"]="📂 Select OBB file to unpack:"
+lang["en,21"]="Opening Telegram channel..."
+lang["en,22"]="✓ Telegram channel opened"
+
+lang["de,0"]="Deutsch"
+lang["de,1"]="OBB-Datei entpacken"
+lang["de,2"]="OBB-Datei neu packen"
+lang["de,3"]="Telegram-Kanal"
+lang["de,4"]="Beenden"
+lang["de,5"]="Option wählen (1-4): "
+lang["de,6"]="Ungültige Option!"
+lang["de,7"]="Keine entpackten Dateien gefunden"
+lang["de,8"]="Erfolgreich entpackt nach: "
+lang["de,9"]="OBB-Datei erfolgreich neu gepackt"
+lang["de,10"]="Ausgabe: "
+lang["de,11"]="Dateinummer auswählen: "
+lang["de,12"]="Keine OBB-Dateien gefunden in "
+lang["de,13"]="Verfügbare OBB-Dateien:"
+lang["de,14"]="Zurück zum Menü"
+lang["de,15"]="Ungültige Auswahl!"
+lang["de,16"]="Entpacke "
+lang["de,17"]="Dateien werden vorbereitet..."
+lang["de,18"]="Dateigröße wird angepasst..."
+lang["de,19"]="🚀 OBB-Dateien werden neu gepackt..."
+lang["de,20"]="📂 OBB-Datei zum Entpacken auswählen:"
+lang["de,21"]="Telegram-Kanal wird geöffnet..."
+lang["de,22"]="✓ Telegram-Kanal geöffnet"
+
+lang["es,0"]="Español"
+lang["es,1"]="Desempaquetar archivo OBB"
+lang["es,2"]="Reempaquetar archivo OBB"
+lang["es,3"]="Canal de Telegram"
+lang["es,4"]="Salir"
+lang["es,5"]="Seleccione opción (1-4): "
+lang["es,6"]="¡Opción inválida!"
+lang["es,7"]="No se encontraron archivos desempaquetados"
+lang["es,8"]="Desempaquetado correctamente en: "
+lang["es,9"]="Archivo OBB reempaquetado con éxito"
+lang["es,10"]="Salida: "
+lang["es,11"]="Seleccione número de archivo: "
+lang["es,12"]="No se encontraron archivos OBB en "
+lang["es,13"]="Archivos OBB disponibles:"
+lang["es,14"]="Volver al menú"
+lang["es,15"]="¡Selección inválida!"
+lang["es,16"]="Desempaquetando "
+lang["es,17"]="Preparando archivos..."
+lang["es,18"]="Ajustando tamaño de archivo..."
+lang["es,19"]="🚀 Reempaquetando archivos OBB..."
+lang["es,20"]="📂 Seleccione archivo OBB para desempaquetar:"
+lang["es,21"]="Abriendo canal de Telegram..."
+lang["es,22"]="✓ Canal de Telegram abierto"
+
+lang["tr,0"]="Türkçe"
+lang["tr,1"]="OBB dosyasını aç"
+lang["tr,2"]="OBB dosyasını yeniden paketle"
+lang["tr,3"]="Bu buton şu an için aktif değil"
+lang["tr,4"]="Çıkış"
+lang["tr,5"]="Seçenek seçin (1-4): "
+lang["tr,6"]="Geçersiz seçenek!"
+lang["tr,7"]="Açılmış dosya bulunamadı"
+lang["tr,8"]="Başarıyla açıldı: "
+lang["tr,9"]="OBB dosyası başarıyla yeniden paketlendi"
+lang["tr,10"]="Çıktı: "
+lang["tr,11"]="Dosya numarası seçin: "
+lang["tr,12"]="Şurada OBB dosyası bulunamadı: "
+lang["tr,13"]="Mevcut OBB dosyaları:"
+lang["tr,14"]="Menüye dön"
+lang["tr,15"]="Geçersiz seçim!"
+lang["tr,16"]="Açılıyor "
+lang["tr,17"]="Dosyalar hazırlanıyor..."
+lang["tr,18"]="Dosya boyutu ayarlanıyor..."
+lang["tr,19"]="🚀 OBB Dosyaları Yeniden Paketleniyor..."
+lang["tr,20"]="📂 Açılacak OBB dosyasını seçin:"
+lang["tr,21"]="Telegram kanalı açılıyor..."
+lang["tr,22"]="✓ Telegram kanalı açıldı"
+
+# Current language (default: English)
+current_lang="en"
+
+# Function to get language string
+function getLang {
+    local key="$1"
+    echo "${lang["$current_lang,$key"]}"
+}
+
+# Check and install required packages
+function check_dependencies {
+    if ! command -v zip &> /dev/null || ! command -v unzip &> /dev/null; then
+        echo -e "${YELLOW}Installing required packages...${NOCOLOR}"
+        pkg update -y && pkg install -y zip unzip
+        if [ $? -ne 0 ]; then
+            echo -e "${LIGHTRED}Failed to install dependencies!${NOCOLOR}"
+            exit 1
+        fi
+        echo -e "${GREEN}Dependencies installed successfully.${NOCOLOR}"
+        sleep 2
+    fi
+}
+
+# Create necessary directories
+mkdir -p "$tool_dir" "$output_dir"
+
+function show_header {
+    clear
+    echo -e "${BLUE}•・━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━・•${NOCOLOR}"
+    echo -e "${GREEN}        🛠️ RYNA CODE 1.2 OBB TOOL 🛠️${NOCOLOR}"
+    echo -e "${BLUE}•・━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━・•${NOCOLOR}"
+    echo ""
+}
+
+function simple_progress {
+    echo -ne "${CYAN}["
+    for i in {1..20}; do
+        echo -ne "▓"
+        sleep 0.05
+    done
+    echo -e "]${NOCOLOR}"
+}
+
+function sizeupdown {
+    cd "$output_dir" || return
+    obbsize=$(cat "$tool_dir/boyutkoruma.ini")
+    count=$(du -b *.obb.zip | awk '{print $1}')
+    
+    echo -e "${CYAN}$(getLang 18)${NOCOLOR}"
+    simple_progress
+    
+    if [ $count -lt $obbsize ]; then
+        while [ $count -lt $obbsize ]; do
+            truncate -s+1 *.zip
+            let count=count+1
+        done
+    else
+        while [ $count -gt $obbsize ]; do
+            truncate -s-1 *.zip
+            let count=count-1
+        done
+    fi
+}
+
+function fnsh {
+    cd "$output_dir" || return
+    obbsize=$(cat "$tool_dir/boyutkoruma.ini")
+    count=$(du -b *.zip | awk '{print $1}')
+    
+    if [ $count -lt $obbsize ]; then
+        while [ $count -lt $obbsize ]; do
+            truncate -s+100 *.zip
+            let count=count+100
+        done
+        sizeupdown
+    else
+        while [ $count -gt $obbsize ]; do
+            truncate -s-100 *.zip
+            let count=count-100
+        done
+        sizeupdown
+    fi
+}
+
+function repackobb {
+    printf "\n"
+    echo -e "${YELLOW}$(getLang 19)${NOCOLOR}"
+    cd "$output_dir" || return
+    
+    mv "$tool_dir"/*.zip "$output_dir" 2>/dev/null
+    
+    echo -e "${CYAN}$(getLang 17)${NOCOLOR}"
+    simple_progress
+    
+    obbnm=$(find . -name "*.obb.zip" -type f -printf "%f\n")
+    obbdir=$(find . -maxdepth 1 -type d ! -name "." -printf "%f\n")
+    
+    zip -r -0 "$obbnm" "$obbdir"
+    fnsh
+    
+    printf "\n"
+    cd "$output_dir" || return
+    obbsize=$(cat "$tool_dir/boyutkoruma.ini")
+    four=$(du -b *.zip | awk '{print $1}')
+    five=$(expr $obbsize - $four)
+    six=$(expr $five / 8)
+    
+    for file in *.obb.zip; do
+        mv "$file" "${file%.obb.zip}.obb"
+    done
+    
+    rm -rf "$tool_dir/boyutkoruma.ini"
+    rm -rf "$obbdir"
+    
+    echo -e "\n${LIGHTGREEN}✅ $(getLang 9)${NOCOLOR}"
+    echo -e "${PURPLE}➤ $(getLang 10) $output_dir${NOCOLOR}"
+    read -p "$(getLang 14)... "
+    main_menu
+}
+
+function unpackobb {
+    printf "\n"
+    echo -e "${YELLOW}$(getLang 20)${NOCOLOR}"
+    
+    cd "$down" || return
+    files=($(find . -maxdepth 1 -name "*.obb" -exec basename {} \;))
+    
+    if [ ${#files[@]} -eq 0 ]; then
+        echo -e "${LIGHTRED}$(getLang 12) $down${NOCOLOR}"
+        read -p "$(getLang 14)... "
+        main_menu
+        return
+    fi
+    
+    echo -e "${CYAN}$(getLang 13)${NOCOLOR}"
+    for i in "${!files[@]}"; do
+        echo -e "${GREEN}$((i+1)). ${files[i]}${NOCOLOR}"
+    done
+    echo -e "${LIGHTRED}0. $(getLang 14)${NOCOLOR}"
+    
+    while true; do
+        read -p "$(getLang 11) " choice
+        if [[ $choice -eq 0 ]]; then
+            main_menu
+            return
+        elif [[ $choice -ge 1 && $choice -le ${#files[@]} ]]; then
+            selected="${files[$((choice-1))]}"
+            break
+        else
+            echo -e "${LIGHTRED}$(getLang 15)${NOCOLOR}"
+        fi
+    done
+    
+    mkdir -p "$output_dir"
+    cd "$output_dir" || return
+    
+    echo -e "${CYAN}$(getLang 16) $selected...${NOCOLOR}"
+    simple_progress
+    
+    cp "$down/$selected" .
+    
+    for f in *.obb; do 
+        mv "$f" "$f.zip"
+    done
+    
+    echo $(du -b *.obb.zip | awk '{print $1}') > "$tool_dir/boyutkoruma.ini"
+    
+    unzip -q *.obb.zip
+    sleep 1
+    
+    mv *.obb.zip "$tool_dir"
+    
+    echo -e "\n${LIGHTGREEN}✅ $(getLang 8) $output_dir${NOCOLOR}"
+    read -p "$(getLang 14)... "
+    main_menu
+}
+
+function open_telegram {
+    echo -e "\n${CYAN}$(getLang 21)${NOCOLOR}"
+    sleep 1
+    if command -v am &> /dev/null; then
+        am start -a android.intent.action.VIEW -d "https://t.me/rynacode" > /dev/null 2>&1
+    else
+        xdg-open "https://t.me/rynacode" > /dev/null 2>&1
+    fi
+    echo -e "${GREEN}✓ $(getLang 22)${NOCOLOR}"
+    sleep 2
+    main_menu
+}
+
+function select_language {
+    show_header
+    check_dependencies
+    
+    echo -e "${CYAN}1. English (English)"
+    echo -e "2. Deutsch (German)"
+    echo -e "3. Español (Spanish)"
+    echo -e "4. Türkçe (Turkish)${NOCOLOR}"
+    
+    while true; do
+        read -p "Select language (1-4): " lang_choice
+        case $lang_choice in
+            1) current_lang="en"; break ;;
+            2) current_lang="de"; break ;;
+            3) current_lang="es"; break ;;
+            4) current_lang="tr"; break ;;
+            *) echo -e "${LIGHTRED}Invalid selection! Please choose 1-4.${NOCOLOR}" ;;
+        esac
+    done
+}
+
+function main_menu {
+    show_header
+    
+    echo -e "${GREEN}$(getLang 0)${NOCOLOR}"
+    echo -e "${CYAN}1. 🗃️ $(getLang 1)"
+    echo -e "2. 🗄️ $(getLang 2)"
+    echo -e "3. 📢 $(getLang 3)"
+    echo -e "4. ❌ $(getLang 4)${NOCOLOR}"
+    
+    while true; do
+        read -p "$(getLang 5) " choice
+        case $choice in
+            1) unpackobb ;;
+            2)
+                if [ -f "$tool_dir/boyutkoruma.ini" ]; then
+                    repackobb
+                else
+                    echo -e "${LIGHTRED}$(getLang 7)${NOCOLOR}"
+                    sleep 1
+                    main_menu
+                fi
+                ;;
+            3) open_telegram ;;
+            4) exit 0 ;;
+            *) echo -e "${LIGHTRED}$(getLang 6)${NOCOLOR}" ;;
+        esac
+    done
+}
+
+# Start by selecting language
+select_language
+# Then show main menu
+main_menu
